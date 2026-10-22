@@ -86,8 +86,55 @@ class Library {
   }
 }
 
+// Save books to localStorage so they are still there after refreshing the page
+function saveBooks() {
+  const data = library.books.map((book) => {
+    return {
+      type:
+        book instanceof AudioBook
+          ? "audiobook"
+          : book instanceof EBook
+            ? "ebook"
+            : "book",
+      title: book.title,
+      author: book.author,
+      genre: book.genre,
+      year: book.year,
+      imagepath: book.imagepath,
+      isRead: book.isRead,
+      fileFormat: book.fileFormat,
+      fileSizeMB: book.fileSizeMB,
+      narrator: book.narrator,
+      durationHrs: book.durationHrs,
+    };
+  });
+  localStorage.setItem("books", JSON.stringify(data));
+}
+
+function loadBooks() {
+  const data = JSON.parse(localStorage.getItem("books"));
+  if (!data) return false;
+
+  data.forEach((item) => {
+    let book;
+    if (item.type === "ebook") {
+      book = new EBook(item.title, item.author, item.genre, item.year, item.imagepath, item.fileFormat, item.fileSizeMB);
+    } else if (item.type === "audiobook") {
+      book = new AudioBook(item.title, item.author, item.genre, item.year, item.imagepath, item.narrator, item.durationHrs);
+    } else {
+      book = new Book(item.title, item.author, item.genre, item.year, item.imagepath);
+    }
+    book.isRead = item.isRead;
+    library.addBook(book);
+  });
+
+  return true;
+}
+
 const library = new Library();
 
+// Only add the starter books if nothing was saved yet
+if (!loadBooks()) {
 library.addBook(
   new EBook(
     "The Art of War",
@@ -154,6 +201,8 @@ library.addBook(
     6.5,
   ),
 );
+  saveBooks();
+}
 
 // Render the books on the page
 
@@ -201,12 +250,14 @@ function renderBooks(books = library.books) {
 
     card.querySelector(".delete-btn").addEventListener("click", () => {
       library.removeBook(book.getId());
+      saveBooks();
       renderBooks();
       renderStats();
     });
 
     card.querySelector(".mark-read input").addEventListener("change", () => {
       book.toggleRead();
+      saveBooks();
       renderBooks();
       renderStats();
     });
@@ -280,6 +331,7 @@ document.getElementById("add-book-btn").addEventListener("click", () => {
     }
 
     library.addBook(book);
+    saveBooks();
     renderBooks();
     renderStats();
 
